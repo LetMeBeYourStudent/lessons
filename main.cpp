@@ -22,7 +22,7 @@ struct Query {
     vector<string> stops;
 };
 
-istream& operator>>(istream& is, Query& q) {
+istream &operator>>(istream &is, Query &q) {
     // Реализуйте эту функцию
     string operation_code;
     is >> operation_code;
@@ -52,25 +52,37 @@ struct BusesForStopResponse {
     vector<string> buses;
 };
 
-ostream& operator<<(ostream& os, const BusesForStopResponse& r) {
+ostream &operator<<(ostream &os, const BusesForStopResponse &r) {
     // Реализуйте эту функцию
-    if (!r.buses.empty())
-        for (const string& bus : r.buses)
-            os << bus << " ";
-    else {
+    if (r.buses.empty())
         os << "No stop";
-    }
-    os << endl;
+    else
+        for (const string &bus: r.buses)
+            os << bus << " ";
     return os;
 }
 
 struct StopsForBusResponse {
     // Наполните полями эту структуру
     vector<string> stops;
+    map<string, vector<string>> stops_to_bus;
 };
 
-ostream& operator<<(ostream& os, const StopsForBusResponse& r) {
+ostream &operator<<(ostream &os, const StopsForBusResponse &r) {
     // Реализуйте эту функцию
+    if (r.stops.empty())
+        os << "No bus";
+    else {
+        for (const string &stop: r.stops) {
+            os << "Stop " << stop << ": ";
+            if (r.stops_to_bus.at(stop).empty())
+                os << "no interchange";
+            else
+                for (const string &bus: r.stops_to_bus.at(stop))
+                    os << bus << " ";
+            os << endl;
+        }
+    }
     return os;
 }
 
@@ -78,30 +90,47 @@ struct AllBusesResponse {
     map<string, vector<string>> lines;
 };
 
-ostream& operator<<(ostream& os, const AllBusesResponse& r) {
+ostream &operator<<(ostream &os, const AllBusesResponse &r) {
     // Реализуйте эту функцию
+    if (r.lines.empty())
+        os << "No buses";
+    else
+        for (const auto& [bus, stops] : r.lines)
+        {
+            os << "Bus " << bus << ": ";
+            for (const string& stop : stops)
+                os << stop << " ";
+            os << endl;
+        }
     return os;
 }
 
 class BusManager {
 public:
-    void AddBus(const string& bus, const vector<string>& stops) {
+    void AddBus(const string &bus, const vector<string> &stops) {
         lines_[bus] = stops;
     }
 
-    BusesForStopResponse GetBusesForStop(const string& stop) const {
+    BusesForStopResponse GetBusesForStop(const string &stop) const {
         // Реализуйте этот метод
         BusesForStopResponse result;
-        for (const auto& [bus, stops] : lines_)
+        for (const auto &[bus, stops]: lines_)
             if (count(stops.begin(), stops.end(), stop)) result.buses.push_back(bus);
         return result;
     }
 
-    StopsForBusResponse GetStopsForBus(const string& bus) const {
+    StopsForBusResponse GetStopsForBus(const string &bus) const {
         // Реализуйте этот метод
         StopsForBusResponse result;
         if (lines_.count(bus))
             result.stops = lines_.at(bus);
+        for (const string &stop: result.stops)
+        {
+            vector<string> r;
+            for (const string& cur_bus : GetBusesForStop(stop).buses)
+                if (cur_bus != bus) r.push_back(cur_bus);
+            result.stops_to_bus[stop] = r;
+        }
         return result;
     }
 
@@ -111,6 +140,7 @@ public:
         result.lines = lines_;
         return result;
     }
+
 private:
     map<string, vector<string>> lines_;
 };
